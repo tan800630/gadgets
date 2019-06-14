@@ -25,10 +25,22 @@ import ipywidgets as widgets
 import matplotlib.pyplot as plt
 
 
-def button_after_click(b):
+def button_after_click(b, ui):
     b.button_style = ''
     b.disabled = True
     b.description = 'Done'
+    
+    # disable ipywidgets elements
+    for ch in ui.children:
+        for ch_ch in ch.children:
+            
+            try:
+                for ch_ch_ch in ch_ch.children:
+                    ch_ch_ch.disabled = True
+            except:
+                pass
+            ch_ch.disabled = True
+            
 
 def set_configuration(config_):
     
@@ -54,8 +66,8 @@ def set_configuration(config_):
         # directory
         config_['main_dir'] = tab_accord.children[1].children[0].value
         config_['random_state'] = 1048
-
-        button_after_click(b)
+        
+        button_after_click(b, tab_accord)
     
     title = HTML('<h1>Configuration</h1>')
     tab_accord = setting_accord()
@@ -70,15 +82,16 @@ def set_configuration(config_):
 def set_data_configuration(data_params_):
     
     def setting_accord():
-        data_box = widgets.Box([widgets.Text(value = 'example: data.csv', description='Data Path:',
-                                                          style = {'description_width': 'initial'}, layout = Layout(flex='3 1 0%', width='auto')),
-                                widgets.Text(value = 'example: ~/images/', description='Image Directory:',
-                                                          style = {'description_width': 'initial'}, layout = Layout(flex='3 1 0%', width='auto'))
+        data_box = widgets.Box([widgets.Text(value = 'example: data.csv', description='Data Path:', style = {'description_width': 'initial'}, layout = Layout(flex='3 1 0%', width='auto')), 
+                                widgets.Text(value = 'example: ~/images/', description='Image Directory:', style = {'description_width': 'initial'}, layout = Layout(flex='3 1 0%', width='auto')),
+                                widgets.Text(value = '', description='Colname of Filename:', style = {'description_width': 'initial'}),
+                                widgets.Text(value = '', description='Colname of Label:', style = {'description_width': 'initial'})
                                ], layout=Layout(display='flex', flex_flow='column', align_items='stretch', width='80%'))
 
 
         preprocess_box = widgets.Box([widgets.HBox([widgets.Checkbox(value=False, description='Save split data',disabled=False),
-                                                     widgets.Checkbox(value = True, description = 'Image Augmentation', disabled = False)]),
+                                                    widgets.Checkbox(value = True, description = 'Image Augmentation', disabled = False),
+                                                    widgets.Checkbox(value = False, description = 'Histogram Equalization', disabled = False)]),
                                       widgets.RadioButtons(options = [(224, 224, 3), (299, 299, 3)], description = 'resize:'),
 
                                       widgets.FloatRangeSlider(value = (-1.0, 1.0), min = -1.0, max = 1.0, description = 'Range of Normalization:',
@@ -99,14 +112,17 @@ def set_data_configuration(data_params_):
         # params of Dataset
         data_params_['data_path'] = tab_accord.children[0].children[0].value
         data_params_['img_dir'] = tab_accord.children[0].children[1].value
+        data_params_['file_name'] = tab_accord.children[0].children[2].value
+        data_params_['label_name'] = tab_accord.children[0].children[3].value
 
         # params for preprocess
         data_params_['save_dataset'] = tab_accord.children[1].children[0].children[0].value
         data_params_['augmentation'] = tab_accord.children[1].children[0].children[1].value
+        data_params_['he'] = tab_accord.children[1].children[0].children[2].value
         data_params_['re_size'] = tab_accord.children[1].children[1].value
         data_params_['normalization_range'] = tab_accord.children[1].children[2].value
 
-        button_after_click(b)
+        button_after_click(b, tab_accord)
 
     title = HTML('<h1>Data setting</h1>')
     tab_accord = setting_accord()
@@ -121,8 +137,9 @@ def set_data_configuration(data_params_):
 def set_model_configuration(model_params_):
     
     def setting_accord():
-        model_box = widgets.Box([widgets.Dropdown(options=['ResNet50', 'Xception', 'DenseNet121'], value='ResNet50',
-                                                  description='Model Architecture:', disabled=False, style = {'description_width': 'initial'}),
+        model_box = widgets.Box([widgets.RadioButtons(options = ['ImageNet pretrain model', 'Custom pretrain model'], description = ''),
+                                 widgets.Dropdown(options=['ResNet50', 'Xception', 'DenseNet121'], value='ResNet50', description='Model Architecture:', disabled=False, style = {'description_width': 'initial'}),
+                                 widgets.Text(value = 'example: ./mymodel.h5', description='Model Path:', style = {'description_width': 'initial'}, layout = Layout(flex='3 1 0%', width='auto'), disabled = True),
                                 ], layout=Layout(display='flex', flex_flow='column', align_items='stretch', width='80%'))
 
         params_box = widgets.Box(children=[widgets.Dropdown(options=['8', '16', '32', '64', '128'], description='Batch size:'),
@@ -152,7 +169,9 @@ def set_model_configuration(model_params_):
     def get_model_params(b):
 
         # model architecture
-        model_params_['model'] = tab_accord.children[0].children[0].value
+        model_params_['model_type'] = tab_accord.children[0].children[0].value
+        model_params_['model'] = tab_accord.children[0].children[1].value
+        model_params_['custom_model_path'] = tab_accord.children[0].children[2].value
 
         # training params
         model_params_['batch_size'] = int(tab_accord.children[1].children[0].value)
@@ -165,16 +184,28 @@ def set_model_configuration(model_params_):
         model_params_['save_dir'] = tab_accord.children[2].children[0].value
         model_params_['model_name'] = tab_accord.children[2].children[1].value
 
-        button_after_click(b)
+        button_after_click(b, tab_accord)
 
     title = HTML('<h1>Model Setting</h1>')
     tab_accord = setting_accord()
+    
+    
+    def obs(b): 
+        if tab_accord.children[0].children[0].value=='ImageNet pretrain model':
+            tab_accord.children[0].children[1].disabled = False
+            tab_accord.children[0].children[2].disabled = True
+        else:
+            tab_accord.children[0].children[1].disabled = True
+            tab_accord.children[0].children[2].disabled = False
+    
     b = widgets.Button(description = 'Set model Params', button_style = 'primary')
     display(title)
     display(tab_accord)
     display(b)
-    
+
+    tab_accord.children[0].children[0].observe(obs)
     b.on_click(get_model_params)
+
 
 def set_test_configuration(test_params_):
     
@@ -182,7 +213,9 @@ def set_test_configuration(test_params_):
         data_box = widgets.Box([widgets.Text(value = 'example: test_dat.csv', description='Data Path:',
                                                           style = {'description_width': 'initial'}, layout = Layout(flex='3 1 0%', width='auto')),
                                 widgets.Text(value = 'example: ~/images/', description='Image Directory:',
-                                                          style = {'description_width': 'initial'}, layout = Layout(flex='3 1 0%', width='auto'))
+                                                          style = {'description_width': 'initial'}, layout = Layout(flex='3 1 0%', width='auto')),
+                                widgets.Text(value = '', description='Colname of Filename:', style = {'description_width': 'initial'}),
+                                widgets.Text(value = '', description='Colname of Label:', style = {'description_width': 'initial'})
                                ], layout=Layout(display='flex', flex_flow='column', align_items='stretch', width='80%'))
 
 
@@ -201,7 +234,7 @@ def set_test_configuration(test_params_):
                                  widgets.Dropdown(options=['8', '16', '32', '64', '128'], description='Batch size:'),
                                  widgets.Text(value = '', description='Prediction file path:',
                                                             style = {'description_width': 'initial'}, layout = Layout(flex='3 1 0%', width='auto')),
-                                ])
+                                ], layout=Layout(display='flex', flex_flow='column', align_items='stretch', width='50%'))
 
         tab_accord = widgets.Accordion(selected_index=None)
         tab_accord.children = [data_box, preprocess_box, model_box]
@@ -216,7 +249,9 @@ def set_test_configuration(test_params_):
         # params of Dataset
         test_params_['data_path'] = tab_accord.children[0].children[0].value
         test_params_['img_dir'] = tab_accord.children[0].children[1].value
-
+        test_params_['file_name'] = tab_accord.children[0].children[2].value
+        test_params_['label_name'] = tab_accord.children[0].children[3].value
+        
         # params for preprocess
         test_params_['save_dataset'] = tab_accord.children[1].children[0].children[0].value
         test_params_['augmentation'] = tab_accord.children[1].children[0].children[1].value
@@ -228,7 +263,7 @@ def set_test_configuration(test_params_):
         test_params_['batch_size'] = int(tab_accord.children[2].children[1].value)
         test_params_['out_path'] = tab_accord.children[2].children[2].value
 
-        button_after_click(b)
+        button_after_click(b, tab_accord)
     
     title = HTML('<h1>Test Setting</h1>')
     tab_accord = setting_accord()
@@ -293,9 +328,23 @@ def image_data_generator(df, img_dir, file_col, target_col, batch_size, re_size,
                 x_batch = [];y_batch = []
                 yield out_x, out_y
 
-def generate_preproc_func(range):
-    def preproc(x):
-        return (x / 255.0)*(range[1]-range[0])+ range[0]
+def hisEqulColor(img):
+    ycrcb = cv2.cvtColor(img, cv2.COLOR_BGR2YCR_CB)
+    channels = cv2.split(ycrcb)
+    cv2.equalizeHist(channels[0], channels[0])
+    cv2.merge(channels, ycrcb)
+    cv2.cvtColor(ycrcb, cv2.COLOR_YCR_CB2BGR, img)
+    return img
+
+def generate_preproc_func(range, he = False):
+    
+    if he:
+        def preproc(x):
+            x = hisEqulColor(x)
+            return (x / 255.0)*(range[1]-range[0])+ range[0]
+    else:
+        def preproc(x):
+            return (x / 255.0)*(range[1]-range[0])+ range[0]
     return preproc
 
 def take_test_id(data, random_state , test_size = 0.2, target = 'View Position'):
@@ -317,13 +366,13 @@ def load_data(config_, data_params_):
 
 def preproc_generator(data, data_params_, model_params_):
     
-    preproc = generate_preproc_func(data_params_['normalization_range'])
+    preproc = generate_preproc_func(data_params_['normalization_range'], data_params_['histogram_equalization'])
 
 
     train_gen=image_data_generator(df = data[0],
                                  img_dir = data_params_['img_dir'],
-                                 file_col = "Image Index",
-                                 target_col = "View Position",
+                                 file_col = data_params_['file_name'],
+                                 target_col = data_params_['label_name'],
                                  batch_size = model_params_['batch_size'],
                                  re_size = data_params_['re_size'][0:2],
                                  preprocess_function = preproc,
@@ -332,8 +381,8 @@ def preproc_generator(data, data_params_, model_params_):
 
     valid_gen=image_data_generator(df = data[1],
                                  img_dir = data_params_['img_dir'],
-                                 file_col = "Image Index",
-                                 target_col = "View Position",
+                                 file_col = data_params_['file_name'],
+                                 target_col = data_params_['label_name'],
                                  batch_size = model_params_['batch_size'],
                                  re_size = data_params_['re_size'][0:2],
                                  preprocess_function = preproc,
@@ -343,18 +392,22 @@ def preproc_generator(data, data_params_, model_params_):
     return [train_gen, valid_gen]
 
 def build_model(data_params_, model_params_):
-    if model_params_['model'] == 'ResNet50':
-        base_model = ResNet50(weights = 'imagenet', include_top = False, input_shape = data_params_['re_size'])
-    elif model_params_['model'] == 'Xception':
-        base_model = Xception(weights = 'imagenet', include_top = False, input_shape = data_params_['re_size'])
-    elif model_params_['model'] == 'DenseNet121':
-        base_model = DenseNet121(weights = 'imagenet', include_top = False, input_shape = data_params_['re_size'])
-        
-    model = base_model.output
-    model = Flatten()(model)
-    model = Dropout(model_params_['dr_rate'])(model)
-    predictions = Dense(2, activation = 'softmax')(model) #class
-    model = Model(inputs = base_model.input, outputs = predictions)
+    
+    if model_params['model_type'] == 'ImageNet pretrain model':
+        if model_params_['model'] == 'ResNet50':
+            base_model = ResNet50(weights = 'imagenet', include_top = False, input_shape = data_params_['re_size'])
+        elif model_params_['model'] == 'Xception':
+            base_model = Xception(weights = 'imagenet', include_top = False, input_shape = data_params_['re_size'])
+        elif model_params_['model'] == 'DenseNet121':
+            base_model = DenseNet121(weights = 'imagenet', include_top = False, input_shape = data_params_['re_size'])
+
+        model = base_model.output
+        model = Flatten()(model)
+        model = Dropout(model_params_['dr_rate'])(model)
+        predictions = Dense(2, activation = 'softmax')(model) #class
+        model = Model(inputs = base_model.input, outputs = predictions)
+    elif model_params['model_type'] == 'Custom pretrain model':
+        model = load_model(model_params_['custom_model_path'])
     
     optimizer = keras.optimizers.Adam(lr = model_params_['lr'])
     
@@ -391,12 +444,12 @@ def model_testing(test_params_):
     # test data generator
     test_gen=image_data_generator(df = test_dat,
                                  img_dir = test_params_['img_dir'],
-                                 file_col = "Image Index",
-                                 target_col = "View Position",
-                                 batch_size = model_params_['batch_size'],
-                                 re_size = data_params_['re_size'][0:2],
+                                 file_col = test_params_['file_name'],
+                                 target_col = test_params_['label_name'],
+                                 batch_size = test_params_['batch_size'],
+                                 re_size = test_params_['re_size'][0:2],
                                  preprocess_function = preproc,
-                                 augmentation = data_params_['augmentation'],
+                                 augmentation = test_params_['augmentation'],
                                  shuffle_ = False)
 
 
